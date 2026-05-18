@@ -1,5 +1,7 @@
 # Sage Money
 ![Desktop Dashboard](demo/demo-desktop.png)
+![Desktop Dashboard](demo/demo-mobile_1.png)
+![Desktop Dashboard](demo/demo-mobile_2.png)
 A vanilla Javascript, zero-bundler personal finance tracker with offline-first support and cloud synchronization.
 
 ## Features
