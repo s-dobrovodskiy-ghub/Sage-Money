@@ -1,12 +1,10 @@
 # Sage Money
-![Desktop Dashboard](demo/demo-desktop.png)
-![Desktop Dashboard](demo/demo-mobile_1.jpg)
-![Desktop Dashboard](demo/demo-mobile_2.jpg)
-
 <p align="center">
-  <img src="assets/ddemo/demo-desktop.png" width="50%" />
-  <img src="assets/demo/demo-mobile_1.jpg" width="20%" />
-   <img src="assets/demo/demo-mobile_2.jpg" width="20%" />
+  <img src="demo/demo-desktop.png" width="800" alt="Desktop Dashboard" />
+</p>
+<p align="center">
+  <img src="demo/demo-mobile_1.jpg" width="30%" style="margin-right: 5%;" alt="Mobile View 1" />
+  <img src="demo/demo-mobile_2.jpg" width="30%" alt="Mobile View 2" />
 </p>
 
 A vanilla Javascript, zero-bundler personal finance tracker with offline-first support and cloud synchronization.
