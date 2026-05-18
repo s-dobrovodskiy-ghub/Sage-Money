@@ -2,6 +2,13 @@
 ![Desktop Dashboard](demo/demo-desktop.png)
 ![Desktop Dashboard](demo/demo-mobile_1.jpg)
 ![Desktop Dashboard](demo/demo-mobile_2.jpg)
+
+<p align="center">
+  <img src="assets/ddemo/demo-desktop.png" width="60%" />
+  <img src="assets/demo/demo-mobile_1.jpg" width="30%" />
+   <img src="assets/demo/demo-mobile_2.jpg" width="30%" />
+</p>
+
 A vanilla Javascript, zero-bundler personal finance tracker with offline-first support and cloud synchronization.
 
 ## Features
