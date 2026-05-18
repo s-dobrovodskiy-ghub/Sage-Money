@@ -1,0 +1,15 @@
+{
+  "name": "Sage Money",
+  "short_name": "Sage",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0a0c0c",
+  "theme_color": "#52796f",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2489/2489756.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
