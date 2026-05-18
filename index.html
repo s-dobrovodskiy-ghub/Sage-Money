@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Manager | Sage</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        :root {
+            --bg-color: #0a0c0c;
+            --surface-color: #141818;
+            --surface-hover: #1c2222;
+            --primary-color: #52796f;
+            --primary-light: #84a98c;
+            --accent-color: #354f52;
+            --text-main: #cad2c5;
+            --text-dim: #84a98c;
+            --white: #ffffff;
+            --danger: #e63946;
+            --success: #52796f;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+        header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 0; margin-bottom: 2rem; }
+        .logo-container { display: flex; align-items: center; gap: 0.75rem; }
+        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--bg-color); box-shadow: 0 8px 20px rgba(82, 121, 111, 0.3); }
+        h1 { font-size: 1.5rem; font-weight: 700; color: var(--white); }
+
+        .btn-sync { background: var(--primary-color); color: var(--bg-color); border: none; padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: var(--transition); font-size: 0.9rem; }
+        .btn-sync:hover { background: var(--primary-light); box-shadow: 0 4px 15px rgba(82, 121, 111, 0.4); }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 2rem; margin-bottom: 2rem; border-bottom: 1px solid var(--accent-color); }
+        .tab { padding: 1rem 0; color: var(--text-dim); cursor: pointer; font-weight: 600; position: relative; transition: var(--transition); }
+        .tab.active { color: var(--white); }
+        .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background: var(--primary-color); }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        /* Dashboard Styles */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .card { background: var(--surface-color); border-radius: 24px; padding: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.05); transition: var(--transition); position: relative; }
+        .card-title { color: var(--text-dim); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .card-value { font-size: 2.2rem; font-weight: 700; color: var(--white); margin-bottom: 0.5rem; }
+        .transactions-card { grid-column: span 2; }
+
+        .transaction-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.03); border-radius: 12px; transition: var(--transition); }
+        .transaction-item:hover { background: var(--surface-hover); }
+        .tx-info { display: flex; gap: 1rem; align-items: center; }
+        .tx-icon { width: 40px; height: 40px; background: var(--accent-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--primary-light); }
+        .tx-amount.negative { color: var(--danger); font-weight: 700; }
+        .tx-category-badge { cursor: pointer; color: var(--primary-light); text-decoration: underline dotted; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; transition: var(--transition); }
+        .tx-category-badge:hover { background: rgba(255,255,255,0.1); color: var(--white); }
+
+        /* Filters */
+        .filters { display: flex; gap: 1rem; margin-bottom: 1.5rem; background: var(--surface-color); padding: 1rem; border-radius: 16px; align-items: flex-end; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; }
+        .filters input, .filters select { background: var(--bg-color); border: 1px solid var(--accent-color); color: var(--white); padding: 0.5rem; border-radius: 8px; outline: none; }
+
+        /* Cashflow Styles */
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--bg-color); border-radius: 16px; margin-bottom: 0.75rem; border: 1px solid transparent; transition: var(--transition); }
+        .item-row:hover { border-color: var(--accent-color); }
+        .item-row input { background: transparent; border: none; color: var(--white); font-size: 1rem; outline: none; }
+        .item-row input[type="number"] { width: 100px; text-align: right; font-weight: 700; color: var(--primary-light); }
+        .item-row input[type="text"] { flex: 1; margin-right: 1rem; }
+        
+        .checkbox-container { width: 24px; height: 24px; border: 2px solid var(--primary-color); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); margin-left: 1rem; }
+        .checkbox-container.checked { background: var(--primary-color); }
+        .checkbox-container i { color: var(--bg-color); display: none; }
+        .checkbox-container.checked i { display: block; }
+
+        .btn-delete { color: var(--danger); background: none; border: none; cursor: pointer; padding: 5px; opacity: 0.3; transition: var(--transition); }
+        .item-row:hover .btn-delete { opacity: 1; }
+
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--surface-color); padding: 2.5rem; border-radius: 32px; width: 90%; max-width: 450px; border: 1px solid var(--accent-color); position: relative; }
+        .category-chip { padding: 8px 16px; border-radius: 20px; background: var(--accent-color); cursor: pointer; margin: 4px; display: inline-block; transition: var(--transition); font-size: 0.9rem; }
+        .category-chip:hover { background: var(--primary-color); color: var(--white); }
+
+        .category-item { cursor: pointer; margin-bottom: 0.5rem; }
+        .category-details { display: none; margin-top: 1rem; padding-left: 1rem; border-left: 2px solid var(--primary-color); font-size: 0.85rem; }
+        .category-details.open { display: block; }
+
+        /* Delete button on transaction items */
+        .tx-delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; opacity: 0; transition: var(--transition); padding: 4px; border-radius: 6px; display: flex; align-items: center; }
+        .transaction-item:hover .tx-delete-btn { opacity: 0.6; }
+        .tx-delete-btn:hover { opacity: 1 !important; background: rgba(230,57,70,0.15); }
+
+        .chart-container { height: 250px; margin-top: 1rem; }
+        
+        /* Toasts */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
+        .toast { background: var(--surface-color); color: var(--white); padding: 12px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease forwards; border-left: 4px solid var(--primary-color); font-size: 0.9rem; }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.success { border-left-color: var(--success); }
+        .toast.info { border-left-color: var(--primary-light); }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate { animation: fadeIn 0.6s ease forwards; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1.5s linear infinite; display: inline-block; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+
+        /* Currency switcher */
+        .cur-switcher { display: flex; gap: 4px; background: var(--bg-color); border-radius: 10px; padding: 4px; }
+        .cur-btn { background: transparent; border: none; color: var(--text-dim); padding: 4px 10px; border-radius: 7px; cursor: pointer; font-size: 0.8rem; font-weight: 600; font-family: 'Outfit', sans-serif; transition: var(--transition); }
+        .cur-btn:hover { color: var(--white); }
+        .cur-btn.active { background: var(--primary-color); color: var(--bg-color); }
+        .rates-display { font-size: 0.7rem; color: var(--text-dim); white-space: nowrap; align-self: center; }
+
+        /* Header actions wrapper */
+        .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .card-full { grid-column: span 2; }
+
+        /* ===== MOBILE RESPONSIVE ===== */
+        @media (max-width: 700px) {
+            .container { padding: 0.75rem; }
+
+            header { flex-direction: column; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 0; margin-bottom: 1rem; }
+            .header-actions { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .header-actions::-webkit-scrollbar { display: none; }
+            .btn-sync { white-space: nowrap; padding: 0.45rem 0.75rem; font-size: 0.8rem; flex-shrink: 0; }
+            h1 { font-size: 1.1rem; }
+            #ratesDisplay { display: none; }
+
+            .tabs { gap: 1.2rem; margin-bottom: 1rem; }
+            .tab { padding: 0.75rem 0; font-size: 0.9rem; }
+
+            .dashboard-grid { grid-template-columns: 1fr !important; gap: 1rem; }
+            .card-full { grid-column: span 1 !important; }
+            .transactions-card { grid-column: span 1 !important; }
+
+            .card { padding: 1rem; border-radius: 16px; }
+            .card-value { font-size: 1.7rem; }
+
+            /* Item rows — single-line compact layout */
+            .item-row { padding: 0.6rem 0.75rem; gap: 0; }
+            .item-row input[type="text"] { font-size: 0.85rem; min-width: 0; flex: 1; margin-right: 0.4rem; }
+            .item-row input[type="number"] { width: 72px; font-size: 0.95rem; color: var(--primary-light); font-weight: 700; }
+            .checkbox-container { width: 20px; height: 20px; border-radius: 6px; margin-left: 0; margin-right: 0.4rem; flex-shrink: 0; }
+            .btn-delete { opacity: 0.6; padding: 4px; }
+
+            /* Filters */
+            .filters { gap: 0.6rem; padding: 0.75rem; }
+            .filter-group { flex: 1 1 calc(50% - 0.3rem); }
+            .filters input, .filters select { font-size: 0.82rem; padding: 0.4rem; width: 100%; }
+            #resetFilters { width: 100%; justify-content: center; }
+
+            /* Toasts */
+            .toast-container { right: 8px; left: 8px; bottom: 12px; }
+            .toast { font-size: 0.82rem; padding: 10px 14px; }
+
+            /* Modal */
+            .modal-content { padding: 1.5rem; border-radius: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <div class="logo-icon"><i data-lucide="wallet"></i></div>
+                <h1>SAGE MONEY</h1>
+            </div>
+            <div class="header-actions">
+                <div class="cur-switcher">
+                    <button class="cur-btn" data-cur="BYN" onclick="window.setDisplayCurrency('BYN')">BYN</button>
+                    <button class="cur-btn" data-cur="RUB" onclick="window.setDisplayCurrency('RUB')">RUB</button>
+                    <button class="cur-btn active" data-cur="USD" onclick="window.setDisplayCurrency('USD')">USD</button>
+                </div>
+                <span id="ratesDisplay" class="rates-display"></span>
+                <div id="syncIndicator" style="margin-right: 4px; color: var(--text-dim); cursor:pointer;" title="Статус облака">
+                    <i data-lucide="cloud-off"></i>
+                </div>
+                <button class="btn-sync" onclick="openUpload()"><i data-lucide="plus-circle"></i> Добавить выписку</button>
+                <button class="btn-sync" id="alfaBtn" onclick="window.connectAlfaBank()"><i data-lucide="link-2"></i> Альфа-Банк</button>
+                <input type="file" id="importJsonInput" accept=".json" style="display:none" onchange="window.importData(event)">
+                <button class="btn-sync" onclick="document.getElementById('importJsonInput').click()"><i data-lucide="upload"></i> Импорт</button>
+                <button class="btn-sync" onclick="exportData()"><i data-lucide="download"></i> JSON</button>
+                <button class="btn-sync" onclick="window.exportForAI()" title="Скопировать отчёт для ИИ-анализа" style="background:var(--accent-color); color:var(--text-color);"><i data-lucide="sparkles"></i> AI отчёт</button>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <div class="tab active" id="tab-dashboard" onclick="switchTab('dashboard')">Дашборд</div>
+            <div class="tab" id="tab-cashflow" onclick="switchTab('cashflow')">Движение средств</div>
+        </nav>
+
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboardView" class="view-section active">
+            <div class="filters animate">
+                <div class="filter-group">
+                    <label>От</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="filter-group">
+                    <label>До</label>
+                    <input type="date" id="endDate">
+                </div>
+                <div class="filter-group">
+                    <label>Поиск</label>
+                    <input type="text" id="searchInput" placeholder="Название..." style="width:150px;">
+                </div>
+                <div class="filter-group">
+                    <label>Категория</label>
+                    <select id="categoryFilter" style="width: 130px;">
+                        <option value="">Все</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Тег</label>
+                    <select id="tagFilter" style="width: 130px;">
+                        <option value="">Все теги</option>
+                    </select>
+                </div>
+                <button class="btn-sync" id="resetFilters" style="padding: 0.5rem 1rem;">Сбросить</button>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card animate">
+                    <div class="card-title"><i data-lucide="trending-down" size="14"></i> Расходы</div>
+                    <div class="card-value" id="totalExpenses">0.00 BYN</div>
+                    <div id="expenseCompare" style="font-size: 0.8rem; margin-top: 5px;"></div>
+                    <div class="chart-container"><canvas id="categoryChart"></canvas></div>
+                </div>
+                <div class="card animate">
+                    <div class="card-title"><i data-lucide="trending-up" size="14"></i> Доходы</div>
+                    <div class="card-value" id="totalIncome" style="color: var(--primary-light);">0.00 BYN</div>
+                    <div id="incomeCompare" style="font-size: 0.8rem; margin-top: 5px;"></div>
+                    <div class="card-title" style="margin-top:1.5rem;"><i data-lucide="scale" size="14"></i> Баланс за период</div>
+                    <div class="card-value" id="totalBalance" style="font-size:1.6rem;">0.00 BYN</div>
+                </div>
+                <div class="card animate" style="animation-delay: 0.1s;">
+                    <div class="card-title"><i data-lucide="pie-chart" size="14"></i> Категории</div>
+                    <div id="categoryList"></div>
+                </div>
+                <div class="card transactions-card animate" style="animation-delay: 0.2s;">
+                    <div class="card-title" style="justify-content:space-between;">
+                        <span><i data-lucide="list" size="14"></i> Операции <span id="txCount" style="font-size:0.7rem; background:var(--accent-color); padding:2px 8px; border-radius:20px; margin-left:6px;"></span></span>
+                        <button onclick="window.clearAllData()" style="background:none; border:none; color:var(--danger); cursor:pointer; opacity:0.4; font-size:0.75rem; display:flex; align-items:center; gap:4px; transition:var(--transition);" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">
+                            <i data-lucide="trash" size="12"></i> Очистить всё
+                        </button>
+                    </div>
+                    <div id="transactionList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CASHFLOW VIEW -->
+        <div id="cashflowView" class="view-section">
+            <div class="dashboard-grid">
+                <div class="card animate card-full">
+                    <div class="card-title" style="justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                        <span><i data-lucide="wallet" size="14"></i> Счета и Кошельки</span>
+                        <button class="btn-sync" onclick="addItem('accounts')" style="padding: 4px 10px; font-size: 0.75rem;">+ Добавить</button>
+                    </div>
+                    <div id="accountsList" style="margin-top: 1rem;"></div>
+                </div>
+
+                <div class="card animate" style="animation-delay: 0.1s;">
+                    <div class="card-title" style="justify-content: space-between">
+                        <span><i data-lucide="trending-up" size="14"></i> Регулярные доходы</span>
+                        <button class="btn-sync" onclick="addItem('regularIncomes')" style="padding: 4px 10px; font-size: 0.75rem;">+ Добавить</button>
+                    </div>
+                    <div id="regularIncomesList" style="margin-top: 1rem;"></div>
+                </div>
+
+                <div class="card animate" style="animation-delay: 0.2s;">
+                    <div class="card-title" style="justify-content: space-between">
+                        <span><i data-lucide="piggy-bank" size="14"></i> Накопления</span>
+                        <button class="btn-sync" onclick="addItem('savings')" style="padding: 4px 10px; font-size: 0.75rem;">+ Добавить</button>
+                    </div>
+                    <div id="savingsList" style="margin-top: 1rem;"></div>
+                </div>
+
+                <div class="card animate card-full" style="animation-delay: 0.3s;">
+                    <div class="card-title" style="justify-content: space-between">
+                        <span><i data-lucide="check-square" size="14"></i> Обязательные платежи</span>
+                        <button class="btn-sync" onclick="addItem('fixed')" style="padding: 4px 10px; font-size: 0.75rem;">+ Добавить</button>
+                    </div>
+                    <div id="fixedList" style="margin-top: 1rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <button onclick="closeUpload()" style="position:absolute; right:20px; top:20px; background:none; border:none; color:var(--text-dim); cursor:pointer;"><i data-lucide="x"></i></button>
+            <div class="upload-section" id="dropZone" style="border: 2px dashed var(--accent-color); padding: 2rem; border-radius: 20px; text-align: center; cursor: pointer; background: var(--bg-color); margin-bottom: 2rem;">
+                <input type="file" id="fileInput" accept=".pdf" style="display:none">
+                <i data-lucide="cloud-upload" size="40" style="color:var(--primary-color); margin-bottom: 1rem;"></i>
+                <h4>Загрузить PDF</h4>
+                <p style="font-size: 0.8rem; color: var(--text-dim)">Перетащите выписку сюда</p>
+            </div>
+            <div style="text-align: left;">
+                <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Или укажите имя файла в папке проекта</label>
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                    <input type="text" id="filePathInput" placeholder="statement.pdf" style="flex:1; background:var(--bg-color); border:1px solid var(--accent-color); color:var(--white); padding: 0.6rem; border-radius: 10px; outline:none">
+                    <button class="btn-sync" onclick="loadByPath()">Загрузить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="categoryModal">
+        <div class="modal-content">
+            <h3>Редактировать операцию</h3>
+            <p id="editTxDesc" style="font-size: 0.85rem; margin: 0.5rem 0 1rem; color: var(--text-dim)"></p>
+            <div style="margin-bottom: 1rem;">
+                <label style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Заметка / Теги (#)</label>
+                <input type="text" id="editTxNote" placeholder="#кафе #обед или любая заметка" style="width: 100%; background: var(--bg-color); border: 1px solid var(--accent-color); color: var(--white); padding: 0.6rem; border-radius: 10px; outline: none; margin-top: 4px;">
+            </div>
+            <label style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; display: block;">Категория</label>
+            <div id="categoryChoices"></div>
+            <button class="btn-sync" onclick="window.saveTransactionEdit()" style="margin-top: 1.5rem; width: 100%; justify-content: center;">Сохранить</button>
+            <button class="btn-sync" onclick="closeModal()" style="margin-top: 0.5rem; width: 100%; justify-content: center; background: transparent; border: 1px solid var(--accent-color);">Отмена</button>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- AUTH MODAL -->
+    <div class="modal" id="authModal" style="display:none;">
+        <div class="modal-content" style="max-width:380px; text-align:center; padding:2.5rem;">
+            <div style="font-size:2.5rem; margin-bottom:0.75rem;">&#9729;</div>
+            <h3 style="margin-bottom:0.25rem;">Sage Money</h3>
+            <p style="color:var(--text-dim); margin-bottom:1.5rem; font-size:0.85rem;">Вход для синхронизации данных</p>
+            <input type="text" id="authLoginInput" placeholder="Логин" autocomplete="username"
+                style="width:100%; margin-bottom:0.75rem; text-align:center; font-size:1rem;"
+                onkeydown="if(event.key==='Enter') document.getElementById('authPassInput').focus()">
+            <input type="password" id="authPassInput" placeholder="Пароль" autocomplete="current-password"
+                style="width:100%; margin-bottom:1.25rem; text-align:center; font-size:1rem;"
+                onkeydown="if(event.key==='Enter') window.submitLogin()">
+            <div id="authError" style="color:#e57373; font-size:0.85rem; margin-bottom:0.75rem; min-height:1.2rem;"></div>
+            <button onclick="window.submitLogin()" style="width:100%; padding:0.8rem; background:var(--primary-color); color:var(--bg-color); border:none; border-radius:12px; font-size:1rem; font-weight:700; cursor:pointer; margin-bottom:0.75rem;">Войти</button>
+            <button onclick="window.skipLogin()" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:0.82rem;">Работать без облака</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
