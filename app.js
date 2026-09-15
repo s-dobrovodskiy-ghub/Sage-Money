@@ -69,8 +69,8 @@ let state = {
 
 // === ALFA-BANK OAUTH ===
 const ALFA = {
-    clientId: 'REDACTED_ALFA_CLIENT_ID',
-    clientSecret: 'REDACTED_ALFA_CLIENT_SECRET',
+    clientId: typeof CONFIG !== 'undefined' ? CONFIG.ALFA_CLIENT_ID : '',
+    clientSecret: typeof CONFIG !== 'undefined' ? CONFIG.ALFA_CLIENT_SECRET : '',
     authUrl: 'https://ibapi.alfabank.by:8273/authorize',
     tokenUrl: 'https://ibapi.alfabank.by:8273/token',
     apiBase: 'https://developerhub.alfabank.by:8273/individual/1.0.0/accounts',
